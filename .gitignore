@@ -1,0 +1,6 @@
+.venv/
+__pycache__/
+.DS_Store
+*.pyc
+runs/
+ai_context.md
