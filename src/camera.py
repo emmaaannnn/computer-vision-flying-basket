@@ -5,6 +5,8 @@ import numpy as np
 
 
 class CameraStream:
+    # Custom wrapper around OpenCV capture so the input source can later change
+    # from the laptop webcam to the drone stream without rewriting pipeline code.
     """Thin webcam wrapper that keeps the local input source replaceable."""
 
     def __init__(self, camera_index: int, frame_width: int, frame_height: int) -> None:

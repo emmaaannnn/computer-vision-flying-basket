@@ -14,6 +14,8 @@ except ImportError:  # pragma: no cover - depends on local environment
 
 @dataclass(slots=True)
 class PersonDetection:
+    # Custom reduced state that decouples the rest of the code from the raw
+    # Ultralytics result objects.
     """Reduced person-target state extracted from the detector output."""
 
     x_center_px: float
@@ -25,6 +27,8 @@ class PersonDetection:
 
 
 class PersonDetector:
+    # Custom adapter around the external YOLO model. The model does detection;
+    # this repo decides how detections are filtered and which person to track.
     """YOLO wrapper restricted to the person class for local validation."""
 
     def __init__(self, config: VisionConfig) -> None:
@@ -45,6 +49,8 @@ class PersonDetector:
         if self._model is None:
             return None
 
+        # Restrict inference to the COCO "person" class so the downstream
+        # pipeline only sees the target category it is built around.
         results = self._model.predict(
             source=frame_bgr,
             classes=[0],
@@ -61,6 +67,8 @@ class PersonDetector:
 
         xyxy_list = boxes.xyxy.cpu().tolist()
         confidence_list = boxes.conf.cpu().tolist()
+        # Custom target-selection rule: follow the largest visible person box,
+        # which is a simple proxy for the main subject in front of the camera.
         best_index = max(
             range(len(xyxy_list)),
             key=lambda index: self._box_area(xyxy_list[index]),

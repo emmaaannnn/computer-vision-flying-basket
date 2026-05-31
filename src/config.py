@@ -7,17 +7,28 @@ from dataclasses import dataclass
 class VisionConfig:
     """Runtime configuration for the local vision validation pipeline."""
 
+    # Custom camera-loop settings for laptop validation.
     camera_index: int = 0
     frame_width: int = 1280
     frame_height: int = 720
     target_fps: float = 30.0
+
+    # Custom preprocessing knobs for the YUV + CLAHE stage in this repo.
     clahe_clip_limit: float = 2.0
     clahe_grid_width: int = 8
     clahe_grid_height: int = 8
+
+    # External detector selection and thresholding.
     model_name: str = "yolov8n.pt"
     confidence_threshold: float = 0.35
+
+    # Custom geometric ranging and safety-window parameters.
     geometric_scale_px_m: float = 950.0
+    reference_distance_m: float | None = None
     min_safe_distance_m: float = 1.0
     max_safe_distance_m: float = 2.0
+
+    # Custom runtime toggles for inspection and debugging.
     enable_inference: bool = True
     show_preprocessed: bool = False
+    show_technical_diagnostics: bool = False

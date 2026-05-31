@@ -19,10 +19,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--model-name", type=str, default="yolov8n.pt")
     parser.add_argument("--confidence", type=float, default=0.35)
     parser.add_argument("--geom-scale", type=float, default=950.0)
+    parser.add_argument("--reference-distance-m", type=float, default=None)
     parser.add_argument("--safe-min", type=float, default=1.0)
     parser.add_argument("--safe-max", type=float, default=2.0)
     parser.add_argument("--disable-inference", action="store_true")
     parser.add_argument("--show-preprocessed", action="store_true")
+    parser.add_argument("--show-technical-diagnostics", action="store_true")
     return parser
 
 
@@ -30,6 +32,8 @@ def main() -> int:
     """Run the local vision loop until the user exits the display window."""
 
     args = build_parser().parse_args()
+    # The CLI maps directly into the custom pipeline configuration so you can
+    # tune preprocessing, detection, and ranging without editing source files.
     config = VisionConfig(
         camera_index=args.camera_index,
         frame_width=args.frame_width,
@@ -38,10 +42,12 @@ def main() -> int:
         model_name=args.model_name,
         confidence_threshold=args.confidence,
         geometric_scale_px_m=args.geom_scale,
+        reference_distance_m=args.reference_distance_m,
         min_safe_distance_m=args.safe_min,
         max_safe_distance_m=args.safe_max,
         enable_inference=not args.disable_inference,
         show_preprocessed=args.show_preprocessed,
+        show_technical_diagnostics=args.show_technical_diagnostics,
     )
 
     pipeline = VisionPipeline(config)

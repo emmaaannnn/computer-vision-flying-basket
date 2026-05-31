@@ -63,9 +63,24 @@ python -m src.main --camera-index 0 --disable-inference --show-preprocessed
 
 For person detection, use the default command above. The first inference-enabled run may download the baseline Ultralytics model weights automatically.
 
+To calibrate the geometric distance constant against a measured position, stand at a known distance and run:
+
+```bash
+python -m src.main --camera-index 0 --reference-distance-m 1.5
+```
+
+When the person box is stable, note the on-screen `scale suggest` value and reuse it in later runs with `--geom-scale`.
+
 ## Calibration note
 
 The current geometric ranging constant is an initial placeholder intended for laptop validation only. Before using the output for any control logic, calibrate `--geom-scale` against a measured subject distance and the observed bounding-box height.
+
+One practical workflow is:
+
+1. Mark a measured distance such as `1.5 m` from the laptop camera.
+2. Run `python -m src.main --camera-index 0 --reference-distance-m 1.5`.
+3. Hold a steady pose until the `scale suggest` overlay settles.
+4. Re-run with that suggested value via `--geom-scale` and verify the reported depth at `1.0 m`, `1.5 m`, and `2.0 m`.
 
 ## Planned pipeline structure
 
