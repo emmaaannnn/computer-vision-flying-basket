@@ -160,56 +160,48 @@ class VisionPipeline:
         loop_ms = (time.perf_counter() - loop_started) * 1000.0
         budget_ms = 1000.0 / self._config.target_fps
 
-        # Custom operator-facing status text. Technical details stay optional
-        # so the same loop can support both demos and debugging.
         lines = [
+            f"loop {loop_ms:.1f} ms / budget {budget_ms:.1f} ms",
             self._status_line(),
-            f"system speed {loop_ms:.1f} ms per frame",
         ]
-
-        if self._config.show_technical_diagnostics:
-            lines.append(f"frame budget {budget_ms:.1f} ms")
 
         if detection is None:
             lines.append("person not found")
             lines.append("step into view and keep your upper body visible")
             return lines
 
-        lines.append(f"person confidence {detection.confidence:.2f}")
-
-        if range_estimate is None:
-            lines.append("distance unavailable")
-            return lines
-
-        state = "within window" if range_estimate.within_safe_window else "outside window"
-        lines.append(f"estimated distance {range_estimate.raw_distance_m:.2f} m")
-        lines.append(f"target range {self._safe_window_label(state)}")
-
-        if calibration is not None:
-            lines.append(f"measured distance {calibration.reference_distance_m:.2f} m")
-            lines.append(f"distance error {calibration.distance_error_m:+.2f} m")
-            lines.append(
-                f"suggested scale {calibration.recommended_scale_px_m:.1f} px*m"
-            )
-
         if self._config.show_technical_diagnostics:
             lines.append(
-                f"box centre ({detection.x_center_px:.0f}, {detection.y_center_px:.0f}) px"
+                f"bbox centre ({detection.x_center_px:.0f}, {detection.y_center_px:.0f}) px"
             )
-            lines.append(f"box height {detection.height_px:.1f} px")
-            lines.append(f"clamped distance {range_estimate.clamped_distance_m:.2f} m")
+            lines.append(f"bbox height {detection.height_px:.1f} px")
+
+        if range_estimate is None:
+            lines.append("depth unavailable")
+            return lines
+
+        lines.append(f"depth raw {range_estimate.raw_distance_m:.2f} m")
+
+        if self._config.show_technical_diagnostics:
+            lines.append(f"depth clamped {range_estimate.clamped_distance_m:.2f} m")
+
+        lines.append(
+            "within window"
+            if range_estimate.within_safe_window
+            else "outside window"
+        )
+
+        if calibration is not None:
+            lines.append(f"calibration ref {calibration.reference_distance_m:.2f} m")
+            lines.append(
+                f"scale suggest {calibration.recommended_scale_px_m:.1f} px*m"
+            )
+            lines.append(f"depth error {calibration.distance_error_m:+.2f} m")
 
         return lines
 
     def _status_line(self) -> str:
         if self._config.enable_inference:
-            return "person tracking ready"
+            return "inference on"
 
-        return "camera preview only"
-
-    @staticmethod
-    def _safe_window_label(state: str) -> str:
-        if state == "within window":
-            return "good"
-
-        return "adjust position"
+        return "inference off"

@@ -63,6 +63,50 @@ python -m src.main --camera-index 0 --disable-inference --show-preprocessed
 
 For person detection, use the default command above. The first inference-enabled run may download the baseline Ultralytics model weights automatically.
 
+## Model benchmarking
+
+The repository currently includes these local nano checkpoints for comparison:
+
+- `./yolov8n.pt`
+- `./yolo11n.pt`
+- `./yolo26n.pt`
+
+Use an explicit local path for `--model-name` when benchmarking. This keeps the run pinned to the checkpoint in the repository root instead of letting Ultralytics substitute a newer alias.
+
+To compare the three local models with the standard camera setup, run these commands one at a time:
+
+```bash
+python -m src.main --camera-index 0 --model-name ./yolov8n.pt
+python -m src.main --camera-index 0 --model-name ./yolo11n.pt
+python -m src.main --camera-index 0 --model-name ./yolo26n.pt
+```
+
+The loop timing and detection stats appear in the live camera window itself, in the top-left overlay while the pipeline is running. The overlay wording now matches the original style again, for example `loop ... / budget ...`, `inference on`, `bbox centre`, `depth raw`, and `depth clamped`.
+
+If you want the exact screenshot-style technical overlay, add `--show-technical-diagnostics`:
+
+```bash
+python -m src.main --camera-index 0 --model-name ./yolov8n.pt --show-technical-diagnostics
+python -m src.main --camera-index 0 --model-name ./yolo11n.pt --show-technical-diagnostics
+python -m src.main --camera-index 0 --model-name ./yolo26n.pt --show-technical-diagnostics
+```
+
+If you also want the calibration lines from the screenshot, such as the reference distance, suggested scale, and distance error, add `--reference-distance-m 1.5` while you stand at that measured distance:
+
+```bash
+python -m src.main --camera-index 0 --model-name ./yolov8n.pt --show-technical-diagnostics --reference-distance-m 1.5
+python -m src.main --camera-index 0 --model-name ./yolo11n.pt --show-technical-diagnostics --reference-distance-m 1.5
+python -m src.main --camera-index 0 --model-name ./yolo26n.pt --show-technical-diagnostics --reference-distance-m 1.5
+```
+
+On macOS or Linux, you can step through the three local models with a shell loop. Close the display window after each run to move to the next model:
+
+```bash
+for model in ./yolov8n.pt ./yolo11n.pt ./yolo26n.pt; do
+	python -m src.main --camera-index 0 --model-name "$model"
+done
+```
+
 To calibrate the geometric distance constant against a measured position, stand at a known distance and run:
 
 ```bash
