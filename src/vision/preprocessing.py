@@ -12,8 +12,6 @@ def apply_luminance_clahe(
 ) -> np.ndarray:
     """Normalise luminance while preserving colour information for inference."""
 
-    # Custom preprocessing choice: enhance only luminance so contrast improves
-    # without distorting the colour channels that the detector still uses.
     yuv_frame = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2YUV)
     y_channel, u_channel, v_channel = cv2.split(yuv_frame)
 

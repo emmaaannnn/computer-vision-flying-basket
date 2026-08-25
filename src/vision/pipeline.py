@@ -5,11 +5,11 @@ import time
 import cv2
 import numpy as np
 
-from src.camera import CameraStream
-from src.config import VisionConfig
-from src.detector import PersonDetection, PersonDetector
-from src.preprocessing import apply_luminance_clahe
-from src.ranging import (
+from src.vision.camera import CameraStream
+from src.vision.config import VisionConfig
+from src.vision.detector import PersonDetection, PersonDetector
+from src.vision.preprocessing import apply_luminance_clahe
+from src.vision.ranging import (
     RangeCalibration,
     RangeEstimate,
     calibrate_geometric_scale,
@@ -37,8 +37,6 @@ class VisionPipeline:
             while True:
                 loop_started = time.perf_counter()
                 frame = self._camera.read()
-                # Custom preprocessing stage used to improve local webcam images
-                # before they are passed into the pretrained detector.
                 processed_frame = apply_luminance_clahe(
                     frame_bgr=frame,
                     clip_limit=self._config.clahe_clip_limit,
@@ -46,8 +44,6 @@ class VisionPipeline:
                     tile_grid_height=self._config.clahe_grid_height,
                 )
 
-                # Detection comes from YOLO, while range estimation and the UI
-                # overlays are custom logic implemented in this repository.
                 detection = self._detector.detect_primary_person(processed_frame)
                 range_estimate = self._estimate_range(detection)
                 calibration = self._estimate_calibration(detection)
@@ -80,8 +76,6 @@ class VisionPipeline:
         if detection is None:
             return None
 
-        # Custom geometric ranging: use apparent person height in pixels as a
-        # simple inverse-depth signal for early validation.
         return estimate_depth_from_height(
             box_height_px=detection.height_px,
             geometric_scale_px_m=self._config.geometric_scale_px_m,
@@ -96,8 +90,6 @@ class VisionPipeline:
         if detection is None or self._config.reference_distance_m is None:
             return None
 
-        # Custom one-point calibration helper for tuning the geometric scale
-        # against a measured real-world distance.
         return calibrate_geometric_scale(
             box_height_px=detection.height_px,
             reference_distance_m=self._config.reference_distance_m,

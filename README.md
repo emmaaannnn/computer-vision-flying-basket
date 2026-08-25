@@ -126,15 +126,25 @@ One practical workflow is:
 3. Hold a steady pose until the `scale suggest` overlay settles.
 4. Re-run with that suggested value via `--geom-scale` and verify the reported depth at `1.0 m`, `1.5 m`, and `2.0 m`.
 
-## Planned pipeline structure
+## Code layout
 
-- `src/camera.py`: camera ingestion abstraction for local webcam testing.
-- `src/preprocessing.py`: YUV conversion and CLAHE enhancement.
-- `src/detector.py`: person detection wrapper for YOLO inference.
-- `src/ranging.py`: O(1) geometric depth estimation from bounding-box height.
-- `src/pipeline.py`: orchestration and on-screen diagnostics.
-- `src/main.py`: local executable entrypoint for laptop-camera validation.
+The repository is now split into two clear areas:
+
+- `src/vision/`: camera capture, preprocessing, YOLO detection, depth estimation, and the local validation pipeline.
+- `src/tello/`: flight control, follow logic, and Tello-specific tuning knobs.
+
+The root entrypoints stay as thin wrappers so the existing commands still work:
+
+- `src/main.py` -> `src.vision.main`
+- `src/follow_tello.py` -> `src.tello.follow`
+
+The main files you will usually tweak are:
+
+- `src/vision/config.py`: camera, model, and detection settings.
+- `src/vision/pipeline.py`: vision overlay and diagnostic behavior.
+- `src/tello/config.py`: follow speed, target distance, and control gains.
+- `src/tello/follow.py`: drone-follow control loop that turns vision into RC commands.
 
 ## Current scope
 
-The present codebase is intentionally laptop-first. It is designed to let you verify the computer-vision loop, tune the pre-processing, and inspect detections before introducing DJI Tello transport, asynchronous UDP ingestion, or downstream control loops.
+The present codebase is intentionally split into a laptop-first vision stack and a Tello flight stack. That keeps the things you tweak for detection separate from the things you tweak for flight behavior.
