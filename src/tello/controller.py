@@ -34,6 +34,12 @@ class TelloController:
             pass
         self._tello.streamon()
 
+    def get_frame_read(self):
+        return self._tello.get_frame_read()
+
+    def stream_on(self) -> None:
+        self._tello.streamon()
+
     def takeoff(self) -> None:
         if not self._state.connected:
             raise RuntimeError("Tello not connected")

@@ -1,14 +1,13 @@
 # Computer Vision Flying Basket
 
-This repository is the local computer-vision foundation for the Flying Basket honours thesis project. The immediate goal is to validate the vision pipeline on a laptop camera before replacing the input source with the DJI Tello video stream.
+This repository is a simple DJI Tello video + YOLO setup for the Flying Basket project.
 
-The first development milestone is a local webcam loop that:
+The main goal is now:
 
-- captures frames from the laptop camera;
-- applies the planned YUV plus CLAHE pre-processing stage;
-- runs person detection for the supervisor target;
-- estimates geometric depth from bounding-box height;
-- overlays diagnostics so the pipeline can be inspected in real time.
+- connect to the Tello Wi-Fi;
+- stream the drone camera to the laptop;
+- run YOLO26n on those frames;
+- show the annotated video on screen.
 
 ## Python environment
 
@@ -47,21 +46,46 @@ python -m pip install -r requirements.txt
 
 1. Activate `.venv`.
 2. Install the dependencies.
-3. Run the local camera pipeline:
+3. Connect your laptop to the Tello Wi-Fi network.
+4. Start the Tello video + YOLO viewer:
 
 ```bash
-python -m src.main --camera-index 0
+python -m src.tello_yolo --model-name ./yolo26n.pt
 ```
 
-If your default webcam is not camera `0`, try another index such as `1`.
+If you want the simplest possible run, you can omit the model flag and let it use the default `./yolo26n.pt` path.
 
-For a camera and pre-processing smoke test without YOLO inference, run:
+## DJI Tello video setup
+
+The Tello is controlled over its own Wi-Fi network, not USB. Plugging it into the laptop only charges the battery.
+
+### 1. Connect to the Tello network
+
+1. Power on the Tello.
+2. On macOS, open Wi-Fi and connect to the drone SSID, which usually looks like `Tello-XXXX`.
+3. Keep the drone on a flat surface with the propellers clear.
+
+If you want to confirm the link from the terminal, run:
 
 ```bash
-python -m src.main --camera-index 0 --disable-inference --show-preprocessed
+ping -c 3 192.168.10.1
 ```
 
-For person detection, use the default command above. The first inference-enabled run may download the baseline Ultralytics model weights automatically.
+### 2. Start the video stream check
+
+Run this to confirm the laptop can receive the drone camera and process it with YOLO:
+
+```bash
+python -m src.tello_yolo --model-name ./yolo26n.pt
+```
+
+This will:
+
+- connect to the Tello SDK;
+- turn on the drone video stream;
+- read frames from the Tello camera;
+- run YOLO26n on the laptop;
+- draw the detections in a display window.
 
 ## Model benchmarking
 
@@ -73,78 +97,45 @@ The repository currently includes these local nano checkpoints for comparison:
 
 Use an explicit local path for `--model-name` when benchmarking. This keeps the run pinned to the checkpoint in the repository root instead of letting Ultralytics substitute a newer alias.
 
-To compare the three local models with the standard camera setup, run these commands one at a time:
+To compare the three local models with the Tello camera stream, run these commands one at a time:
 
 ```bash
-python -m src.main --camera-index 0 --model-name ./yolov8n.pt
-python -m src.main --camera-index 0 --model-name ./yolo11n.pt
-python -m src.main --camera-index 0 --model-name ./yolo26n.pt
+python -m src.tello_yolo --model-name ./yolov8n.pt
+python -m src.tello_yolo --model-name ./yolo11n.pt
+python -m src.tello_yolo --model-name ./yolo26n.pt
 ```
 
-The loop timing and detection stats appear in the live camera window itself, in the top-left overlay while the pipeline is running. The overlay wording now matches the original style again, for example `loop ... / budget ...`, `inference on`, `bbox centre`, `depth raw`, and `depth clamped`.
+The loop timing and detection stats appear in the live Tello window itself.
 
 If you want the exact screenshot-style technical overlay, add `--show-technical-diagnostics`:
 
 ```bash
-python -m src.main --camera-index 0 --model-name ./yolov8n.pt --show-technical-diagnostics
-python -m src.main --camera-index 0 --model-name ./yolo11n.pt --show-technical-diagnostics
-python -m src.main --camera-index 0 --model-name ./yolo26n.pt --show-technical-diagnostics
-```
-
-If you also want the calibration lines from the screenshot, such as the reference distance, suggested scale, and distance error, add `--reference-distance-m 1.5` while you stand at that measured distance:
-
-```bash
-python -m src.main --camera-index 0 --model-name ./yolov8n.pt --show-technical-diagnostics --reference-distance-m 1.5
-python -m src.main --camera-index 0 --model-name ./yolo11n.pt --show-technical-diagnostics --reference-distance-m 1.5
-python -m src.main --camera-index 0 --model-name ./yolo26n.pt --show-technical-diagnostics --reference-distance-m 1.5
+python -m src.tello_yolo --model-name ./yolov8n.pt --show-technical-diagnostics
+python -m src.tello_yolo --model-name ./yolo11n.pt --show-technical-diagnostics
+python -m src.tello_yolo --model-name ./yolo26n.pt --show-technical-diagnostics
 ```
 
 On macOS or Linux, you can step through the three local models with a shell loop. Close the display window after each run to move to the next model:
 
 ```bash
 for model in ./yolov8n.pt ./yolo11n.pt ./yolo26n.pt; do
-	python -m src.main --camera-index 0 --model-name "$model"
+	python -m src.tello_yolo --model-name "$model"
 done
 ```
-
-To calibrate the geometric distance constant against a measured position, stand at a known distance and run:
-
-```bash
-python -m src.main --camera-index 0 --reference-distance-m 1.5
-```
-
-When the person box is stable, note the on-screen `scale suggest` value and reuse it in later runs with `--geom-scale`.
-
-## Calibration note
-
-The current geometric ranging constant is an initial placeholder intended for laptop validation only. Before using the output for any control logic, calibrate `--geom-scale` against a measured subject distance and the observed bounding-box height.
-
-One practical workflow is:
-
-1. Mark a measured distance such as `1.5 m` from the laptop camera.
-2. Run `python -m src.main --camera-index 0 --reference-distance-m 1.5`.
-3. Hold a steady pose until the `scale suggest` overlay settles.
-4. Re-run with that suggested value via `--geom-scale` and verify the reported depth at `1.0 m`, `1.5 m`, and `2.0 m`.
 
 ## Code layout
 
 The repository is now split into two clear areas:
 
-- `src/vision/`: camera capture, preprocessing, YOLO detection, depth estimation, and the local validation pipeline.
-- `src/tello/`: flight control, follow logic, and Tello-specific tuning knobs.
+- `src/vision/`: the YOLO person detector.
+- `src/tello/`: the Tello video stream adapter and the Tello YOLO viewer.
 
 The root entrypoints stay as thin wrappers so the existing commands still work:
 
-- `src/main.py` -> `src.vision.main`
-- `src/follow_tello.py` -> `src.tello.follow`
+- `src/tello_yolo.py` -> `src.tello.yolo_stream`
 
 The main files you will usually tweak are:
 
-- `src/vision/config.py`: camera, model, and detection settings.
-- `src/vision/pipeline.py`: vision overlay and diagnostic behavior.
-- `src/tello/config.py`: follow speed, target distance, and control gains.
-- `src/tello/follow.py`: drone-follow control loop that turns vision into RC commands.
-
-## Current scope
-
-The present codebase is intentionally split into a laptop-first vision stack and a Tello flight stack. That keeps the things you tweak for detection separate from the things you tweak for flight behavior.
+- `src/vision/detector.py`: YOLO person detection.
+- `src/tello/video_stream.py`: Tello camera connection and frame handling.
+- `src/tello/yolo_stream.py`: the display loop that runs YOLO on the Tello frames.

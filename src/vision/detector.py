@@ -4,8 +4,6 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from src.vision.config import VisionConfig
-
 try:
     from ultralytics import YOLO
 except ImportError:  # pragma: no cover - depends on local environment
@@ -25,21 +23,16 @@ class PersonDetection:
 
 
 class PersonDetector:
-    """YOLO wrapper restricted to the person class for local validation."""
+    """YOLO wrapper restricted to the person class."""
 
-    def __init__(self, config: VisionConfig) -> None:
-        self._config = config
-
-        if not config.enable_inference:
-            self._model = None
-            return
-
+    def __init__(self, model_name: str, confidence_threshold: float = 0.35) -> None:
         if YOLO is None:
             raise RuntimeError(
                 "ultralytics is not installed in the active environment."
             )
 
-        self._model = YOLO(config.model_name)
+        self._model = YOLO(model_name)
+        self._confidence_threshold = confidence_threshold
 
     def detect_primary_person(self, frame_bgr: np.ndarray) -> PersonDetection | None:
         if self._model is None:
@@ -48,7 +41,7 @@ class PersonDetector:
         results = self._model.predict(
             source=frame_bgr,
             classes=[0],
-            conf=self._config.confidence_threshold,
+            conf=self._confidence_threshold,
             verbose=False,
         )
 
