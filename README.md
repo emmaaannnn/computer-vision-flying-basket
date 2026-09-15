@@ -1,141 +1,154 @@
 # Computer Vision Flying Basket
 
-This repository is a simple DJI Tello video + YOLO setup for the Flying Basket project.
+DJI Tello human-following mode with one simple command line.
+## What you choose
 
-The main goal is now:
+- `--detector`: `opencv`, `yolo11n`, or `yolo26n`
+- `--distance-cm`: how far from the person you want the drone to stay
+- `--height-cm`: how high from the ground you want the drone to stay
+- `--log-file`: where to write the CSV log
 
-- connect to the Tello Wi-Fi;
-- stream the drone camera to the laptop;
-- run YOLO26n on those frames;
-- show the annotated video on screen.
-
-## Python environment
-
-This project uses a local `.venv` virtual environment for all `pip` installs and runtime commands.
-
-### Activate the virtual environment
-
-macOS or Linux:
+## Setup
 
 ```bash
 source .venv/bin/activate
-```
-
-Windows PowerShell:
-
-```powershell
-.venv\Scripts\Activate.ps1
-```
-
-Windows Command Prompt:
-
-```bat
-.venv\Scripts\activate.bat
-```
-
-When the environment is active, your shell prompt should show `(.venv)`.
-
-### Install dependencies into `.venv`
-
-```bash
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
-
-## Quick start
-
-1. Activate `.venv`.
-2. Install the dependencies.
-3. Connect your laptop to the Tello Wi-Fi network.
-4. Start the Tello video + YOLO viewer:
-
-```bash
-python -m src.tello_yolo --model-name ./yolo26n.pt
-```
-
-If you want the simplest possible run, you can omit the model flag and let it use the default `./yolo26n.pt` path.
-
-## DJI Tello video setup
-
-The Tello is controlled over its own Wi-Fi network, not USB. Plugging it into the laptop only charges the battery.
-
-### 1. Connect to the Tello network
-
-1. Power on the Tello.
-2. On macOS, open Wi-Fi and connect to the drone SSID, which usually looks like `Tello-XXXX`.
-3. Keep the drone on a flat surface with the propellers clear.
-
-If you want to confirm the link from the terminal, run:
 
 ```bash
 ping -c 3 192.168.10.1
 ```
 
-### 2. Start the video stream check
+## Commands
 
-Run this to confirm the laptop can receive the drone camera and process it with YOLO:
-
-```bash
-python -m src.tello_yolo --model-name ./yolo26n.pt
-```
-
-This will:
-
-- connect to the Tello SDK;
-- turn on the drone video stream;
-- read frames from the Tello camera;
-- run YOLO26n on the laptop;
-- draw the detections in a display window.
-
-## Model benchmarking
-
-The repository currently includes these local nano checkpoints for comparison:
-
-- `./yolov8n.pt`
-- `./yolo11n.pt`
-- `./yolo26n.pt`
-
-Use an explicit local path for `--model-name` when benchmarking. This keeps the run pinned to the checkpoint in the repository root instead of letting Ultralytics substitute a newer alias.
-
-To compare the three local models with the Tello camera stream, run these commands one at a time:
+OpenCV baseline:
 
 ```bash
-python -m src.tello_yolo --model-name ./yolov8n.pt
-python -m src.tello_yolo --model-name ./yolo11n.pt
-python -m src.tello_yolo --model-name ./yolo26n.pt
+python -m src.tello_follow --detector opencv --distance-cm 120 --height-cm 120
 ```
 
-The loop timing and detection stats appear in the live Tello window itself.
-
-If you want the exact screenshot-style technical overlay, add `--show-technical-diagnostics`:
+YOLO11n:
 
 ```bash
-python -m src.tello_yolo --model-name ./yolov8n.pt --show-technical-diagnostics
-python -m src.tello_yolo --model-name ./yolo11n.pt --show-technical-diagnostics
-python -m src.tello_yolo --model-name ./yolo26n.pt --show-technical-diagnostics
+python -m src.tello_follow --detector yolo11n --distance-cm 120 --height-cm 120
 ```
 
-On macOS or Linux, you can step through the three local models with a shell loop. Close the display window after each run to move to the next model:
+YOLO26n:
 
 ```bash
-for model in ./yolov8n.pt ./yolo11n.pt ./yolo26n.pt; do
-	python -m src.tello_yolo --model-name "$model"
-done
+python -m src.tello_follow --detector yolo26n --distance-cm 120 --height-cm 120
 ```
 
-## Code layout
+Add takeoff when you are ready to fly:
 
-The repository is now split into two clear areas:
+```bash
+python -m src.tello_follow --detector yolo26n --distance-cm 120 --height-cm 120 --takeoff
+```
 
-- `src/vision/`: the YOLO person detector.
-- `src/tello/`: the Tello video stream adapter and the Tello YOLO viewer.
+If you keep pasting the older launcher, this still works:
 
-The root entrypoints stay as thin wrappers so the existing commands still work:
+```bash
+python -m src.tello_yolo --distance-cm 120 --height-cm 120
+```
 
-- `src/tello_yolo.py` -> `src.tello.yolo_stream`
+## Why no model path?
 
-The main files you will usually tweak are:
+You should not need to pass a path for normal use. The detector picks the default checkpoint automatically:
 
-- `src/vision/detector.py`: YOLO person detection.
-- `src/tello/video_stream.py`: Tello camera connection and frame handling.
-- `src/tello/yolo_stream.py`: the display loop that runs YOLO on the Tello frames.
+- `opencv` uses the built-in OpenCV human detector.
+- `yolo11n` uses `./yolo11n.pt`.
+- `yolo26n` uses `./yolo26n.pt`.
+
+Use `--model-path` only if you want to override the default checkpoint.
+
+## Logs
+
+Every run writes a CSV file to `logs/tello_follow.csv` unless you choose a different `--log-file`.
+
+## Testing order
+
+1. Run OpenCV first without takeoff.
+2. If OpenCV misses you, switch to YOLO11n.
+3. If YOLO11n is still weak, try YOLO26n.
+4. Only add `--takeoff` after the detector and height settings look right.
+
+## Notes
+
+- Press `q` to quit the window.
+- If you want to override the checkpoint manually, add `--model-path`.
+# Computer Vision Flying Basket
+
+DJI Tello follow mode with one shared command line for OpenCV, YOLO11n, and YOLO26n.
+
+## Quick Start
+
+1. Activate the virtual environment.
+2. Install dependencies.
+3. Connect to the Tello Wi-Fi network.
+4. Start with the simplest detector first.
+
+```bash
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
+
+```bash
+ping -c 3 192.168.10.1
+```
+
+## Commands
+
+OpenCV baseline:
+
+```bash
+python -m src.tello_follow --detector opencv --target-height-cm 120
+```
+
+YOLO11n:
+
+```bash
+python -m src.tello_follow --detector yolo11n --target-height-cm 120
+```
+
+YOLO26n:
+
+```bash
+python -m src.tello_follow --detector yolo26n --target-height-cm 120
+```
+
+Same run, but with takeoff:
+
+```bash
+python -m src.tello_follow --detector yolo26n --target-height-cm 120 --takeoff
+```
+
+Compatibility command if you still paste the older launcher:
+
+```bash
+python -m src.tello_yolo --target-height-cm 120
+```
+
+If you ever want to override the checkpoint manually, use `--model-path`:
+
+```bash
+python -m src.tello_follow --detector yolo26n --model-path ./yolo26n.pt --target-height-cm 120
+```
+
+## Testing Order
+
+1. Run OpenCV first without takeoff.
+2. If OpenCV misses you, switch to YOLO11n.
+3. If YOLO11n is still weak, try YOLO26n.
+4. Only add `--takeoff` when the detector output and height target look correct.
+
+## Logs
+
+Each run writes `logs/tello_follow.csv` with detection boxes, current height, target height, and command values.
+
+## Notes
+
+- `--detector` selects the default model, so `--model-path` is optional.
+- `--model-path` is only for manual overrides or benchmarking.
+- Press `q` to quit the window.

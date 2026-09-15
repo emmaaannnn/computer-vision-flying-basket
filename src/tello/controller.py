@@ -37,6 +37,12 @@ class TelloController:
     def get_frame_read(self):
         return self._tello.get_frame_read()
 
+    def get_height_cm(self) -> int | None:
+        try:
+            return int(self._tello.get_height())
+        except Exception:
+            return None
+
     def stream_on(self) -> None:
         self._tello.streamon()
 

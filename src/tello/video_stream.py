@@ -21,6 +21,18 @@ class TelloVideoStream:
         self._frame_read = self._tello.get_frame_read()
         time.sleep(1.5)
 
+    def takeoff(self) -> None:
+        self._tello.takeoff()
+
+    def land(self) -> None:
+        self._tello.land()
+
+    def send_velocity(self, left_right: int, forward_backward: int, up_down: int, yaw: int) -> None:
+        self._tello.send_velocity(left_right, forward_backward, up_down, yaw)
+
+    def get_height_cm(self) -> int | None:
+        return self._tello.get_height_cm()
+
     def read(self) -> np.ndarray:
         if self._frame_read is None:
             raise RuntimeError("Tello video stream has not been opened.")

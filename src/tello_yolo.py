@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from src.tello.yolo_stream import main
+from src.tello.follow_stream import main
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(main(default_detector="yolo26n"))
