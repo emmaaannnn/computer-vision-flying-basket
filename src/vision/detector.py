@@ -35,8 +35,14 @@ class PersonDetector:
         self._confidence_threshold = confidence_threshold
 
     def detect_primary_person(self, frame_bgr: np.ndarray) -> PersonDetection | None:
-        if self._model is None:
+        detections = self.detect_persons(frame_bgr)
+        if not detections:
             return None
+        return max(detections, key=lambda detection: detection.width_px * detection.height_px)
+
+    def detect_persons(self, frame_bgr: np.ndarray) -> list[PersonDetection]:
+        if self._model is None:
+            return []
 
         results = self._model.predict(
             source=frame_bgr,
@@ -46,33 +52,28 @@ class PersonDetector:
         )
 
         if not results:
-            return None
+            return []
 
         boxes = results[0].boxes
         if boxes is None or len(boxes) == 0:
-            return None
+            return []
 
         xyxy_list = boxes.xyxy.cpu().tolist()
         confidence_list = boxes.conf.cpu().tolist()
-        best_index = max(
-            range(len(xyxy_list)),
-            key=lambda index: self._box_area(xyxy_list[index]),
-        )
+        detections: list[PersonDetection] = []
+        for box, confidence in zip(xyxy_list, confidence_list):
+            x1, y1, x2, y2 = box
+            width_px = max(0.0, x2 - x1)
+            height_px = max(0.0, y2 - y1)
+            detections.append(
+                PersonDetection(
+                    x_center_px=x1 + (width_px / 2.0),
+                    y_center_px=y1 + (height_px / 2.0),
+                    width_px=width_px,
+                    height_px=height_px,
+                    confidence=float(confidence),
+                    box_xyxy=(int(x1), int(y1), int(x2), int(y2)),
+                )
+            )
 
-        x1, y1, x2, y2 = xyxy_list[best_index]
-        width_px = max(0.0, x2 - x1)
-        height_px = max(0.0, y2 - y1)
-
-        return PersonDetection(
-            x_center_px=x1 + (width_px / 2.0),
-            y_center_px=y1 + (height_px / 2.0),
-            width_px=width_px,
-            height_px=height_px,
-            confidence=float(confidence_list[best_index]),
-            box_xyxy=(int(x1), int(y1), int(x2), int(y2)),
-        )
-
-    @staticmethod
-    def _box_area(box_xyxy: list[float]) -> float:
-        x1, y1, x2, y2 = box_xyxy
-        return max(0.0, x2 - x1) * max(0.0, y2 - y1)
+        return detections

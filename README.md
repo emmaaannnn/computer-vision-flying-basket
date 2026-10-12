@@ -1,12 +1,7 @@
 # Computer Vision Flying Basket
 
-DJI Tello human-following mode with one simple command line.
-## What you choose
-
-- `--detector`: `opencv`, `yolo11n`, or `yolo26n`
-- `--distance-cm`: how far from the person you want the drone to stay
-- `--height-cm`: how high from the ground you want the drone to stay
-- `--log-file`: where to write the CSV log
+DJI Tello human-following mode with one command line for OpenCV, YOLOv8n,
+YOLO11n, and YOLO26n.
 
 ## Setup
 
@@ -16,139 +11,89 @@ python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
+Download the MediaPipe hand-landmark model once while you have internet access.
+The file is used locally when connected to the drone:
+
+```bash
+curl -L https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task -o hand_landmarker.task
+```
+
+Connect to the Tello Wi-Fi network before starting. You can check the
+connection with:
+
 ```bash
 ping -c 3 192.168.10.1
 ```
 
-## Commands
+## Run
 
-OpenCV baseline:
+Choose a detector and set the desired follow distance and height:
 
 ```bash
 python -m src.tello_follow --detector opencv --distance-cm 120 --height-cm 120
-```
-
-YOLO11n:
-
-```bash
+python -m src.tello_follow --detector yolov8n --distance-cm 120 --height-cm 120
 python -m src.tello_follow --detector yolo11n --distance-cm 120 --height-cm 120
-```
-
-YOLO26n:
-
-```bash
 python -m src.tello_follow --detector yolo26n --distance-cm 120 --height-cm 120
 ```
 
-Add takeoff when you are ready to fly:
+By default, YOLO detectors use their corresponding checkpoint in the project
+directory: `yolov8n.pt`, `yolo11n.pt`, or `yolo26n.pt`. Override it with
+`--model-path`, for example:
 
 ```bash
-python -m src.tello_follow --detector yolo26n --distance-cm 120 --height-cm 120 --takeoff
+python -m src.tello_follow --detector yolov8n --model-path ./yolov8n.pt --distance-cm 120 --height-cm 120
 ```
 
-If you keep pasting the older launcher, this still works:
+The drone does not take off unless you pass `--takeoff`. Check the detector and
+controls without takeoff first:
+
+```bash
+python -m src.tello_follow --detector yolov8n --distance-cm 120 --height-cm 120 --takeoff
+```
+
+The older launcher remains available and defaults to YOLO26n:
 
 ```bash
 python -m src.tello_yolo --distance-cm 120 --height-cm 120
 ```
 
-## Why no model path?
+## Person lock and distance estimate
 
-You should not need to pass a path for normal use. The detector picks the default checkpoint automatically:
+Before lock-on, the video shows detected people but the drone does not follow
+anyone. Hold an open palm upright toward the camera for about one second. The
+program associates the hand with the closest unambiguous person detection and
+locks onto that person. Lower your hand; you do not need to keep the signal up.
+Show the same open-palm signal again to toggle the lock off.
 
-- `opencv` uses the built-in OpenCV human detector.
-- `yolo11n` uses `./yolo11n.pt`.
-- `yolo26n` uses `./yolo26n.pt`.
+While locked, the program matches detections to the selected person's previous
+position instead of choosing the largest person in every frame. If the target
+is missing or multiple detections are similarly plausible, it sends zero
+velocity commands until it can match the target unambiguously. This is
+best-effort visual tracking, not guaranteed identity recognition: it does not
+recognize your face, and people crossing or occluding one another can still
+confuse image-based tracking. Test in a clear area and be ready to stop/land the
+drone.
 
-Use `--model-path` only if you want to override the default checkpoint.
+Forward/backward control compares the detected person's height in pixels with
+an estimated target height. The estimate assumes a 220-pixel-tall person at
+120 cm and scales it for the requested distance. This is a rough image-size
+heuristic, not calibrated depth measurement; camera resolution, framing, and
+body pose affect it. MediaPipe Hands is used for open-palm detection.
 
-## Logs
+## CSV logs
 
-Every run writes a CSV file to `logs/tello_follow.csv` unless you choose a different `--log-file`.
+Each run creates a new CSV under `logs/`, named with the detector and local
+date/time, such as `yolov8n_20261012_175137_123456.csv`. A row is written and
+flushed as each video frame is processed, so the log grows during the run.
 
-## Testing order
-
-1. Run OpenCV first without takeoff.
-2. If OpenCV misses you, switch to YOLO11n.
-3. If YOLO11n is still weak, try YOLO26n.
-4. Only add `--takeoff` after the detector and height settings look right.
-
-## Notes
-
-- Press `q` to quit the window.
-- If you want to override the checkpoint manually, add `--model-path`.
-# Computer Vision Flying Basket
-
-DJI Tello follow mode with one shared command line for OpenCV, YOLO11n, and YOLO26n.
-
-## Quick Start
-
-1. Activate the virtual environment.
-2. Install dependencies.
-3. Connect to the Tello Wi-Fi network.
-4. Start with the simplest detector first.
+To use a custom filename prefix while still creating a unique file per run:
 
 ```bash
-source .venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
+python -m src.tello_follow --detector yolov8n --log-file logs/field-test.csv
 ```
 
-```bash
-ping -c 3 192.168.10.1
-```
+This creates a file such as `logs/field-test_yolov8n_20261012_175137_123456.csv`.
+The CSV includes lock state, per-frame detections, bounding boxes, pixel
+errors, height readings, and velocity commands.
 
-## Commands
-
-OpenCV baseline:
-
-```bash
-python -m src.tello_follow --detector opencv --target-height-cm 120
-```
-
-YOLO11n:
-
-```bash
-python -m src.tello_follow --detector yolo11n --target-height-cm 120
-```
-
-YOLO26n:
-
-```bash
-python -m src.tello_follow --detector yolo26n --target-height-cm 120
-```
-
-Same run, but with takeoff:
-
-```bash
-python -m src.tello_follow --detector yolo26n --target-height-cm 120 --takeoff
-```
-
-Compatibility command if you still paste the older launcher:
-
-```bash
-python -m src.tello_yolo --target-height-cm 120
-```
-
-If you ever want to override the checkpoint manually, use `--model-path`:
-
-```bash
-python -m src.tello_follow --detector yolo26n --model-path ./yolo26n.pt --target-height-cm 120
-```
-
-## Testing Order
-
-1. Run OpenCV first without takeoff.
-2. If OpenCV misses you, switch to YOLO11n.
-3. If YOLO11n is still weak, try YOLO26n.
-4. Only add `--takeoff` when the detector output and height target look correct.
-
-## Logs
-
-Each run writes `logs/tello_follow.csv` with detection boxes, current height, target height, and command values.
-
-## Notes
-
-- `--detector` selects the default model, so `--model-path` is optional.
-- `--model-path` is only for manual overrides or benchmarking.
-- Press `q` to quit the window.
+Press `q` or Escape to quit.

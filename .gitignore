@@ -2,5 +2,6 @@
 __pycache__/
 .DS_Store
 *.pyc
+hand_landmarker.task
 runs/
 ai_context.md
