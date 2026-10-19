@@ -11,11 +11,12 @@ python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
-Download the MediaPipe hand-landmark model once while you have internet access.
-The file is used locally when connected to the drone:
+On first run, the program downloads the MediaPipe hand-landmark model if it is
+missing. This requires internet access. If your computer is already connected
+to the Tello Wi-Fi, download the model before switching networks:
 
 ```bash
-curl -L https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task -o hand_landmarker.task
+curl -fL https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task -o hand_landmarker.task
 ```
 
 Connect to the Tello Wi-Fi network before starting. You can check the
@@ -64,6 +65,12 @@ anyone. Hold an open palm upright toward the camera for about one second. The
 program associates the hand with the closest unambiguous person detection and
 locks onto that person. Lower your hand; you do not need to keep the signal up.
 Show the same open-palm signal again to toggle the lock off.
+
+The open-palm check uses 3D finger-joint angles, so it is less sensitive to
+which direction the hand is tilted in the image. Hand detection confidence is
+lowered to favor finding hands, and brief detection dropouts no longer restart
+the one-second gesture hold. For best results, keep the whole hand visible,
+face the palm toward the camera, and use good lighting.
 
 While locked, the program matches detections to the selected person's previous
 position instead of choosing the largest person in every frame. If the target
